@@ -1,0 +1,17 @@
+<div ng-repeat="(fieldName,field) in vm.properties" ng-if="field.hiden != true">
+	<div class="form-group" ng-class="{'has-error': {{vm.formId}}-aggregate.{{fieldName}}.$invalid}">
+	    <label for="{{fieldName}}" class="col-xs-3 control-label">{{vm.serverConnection.convertCaseAnyToLabel(field.label)}}</label>
+
+		<div class="col-xs-3">
+			<select class="form-control" id="{{vm.formId}}-sort-order_by-{{fieldName}}" name="{{fieldName}}-order_by" ng-model="vm.properties[fieldName].sortType" ng-options="o for o in ['asc', 'desc']"></select>
+		</div>
+
+	    <div class="col-xs-3">
+			<input  class="form-control" id="{{vm.formId}}-sort-index-{{fieldName}}" name="{{fieldName}}-index" ng-model="vm.properties[fieldName].orderIndex" type="number" step="1">
+	    </div>
+
+	    <div class="col-xs-3">
+            <input  class="form-control" id="{{vm.formId}}-sort-table_visible-{{fieldName}}" name="{{fieldName}}-table_visible" ng-model="vm.properties[fieldName].tableVisible" type="checkbox">
+	    </div>
+	</div>
+</div>

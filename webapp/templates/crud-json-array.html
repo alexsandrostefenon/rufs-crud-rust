@@ -1,0 +1,40 @@
+<div ng-if="edit == true || vm.filterResults.length > 0">
+	<hr/>
+	<h3>{{vm.title}}</h3>
+</div>
+
+<form id="{{vm.formId}}" name="{{vm.formId}}" class="form-horizontal" role="form" ng-if="edit == true">
+	<div ng-include="'./templates/crud-model_form_body.html'"></div>
+
+    <div class="form-group">
+		<div class="col-sm-offset-2 col-sm-10">
+		    <button id="{{vm.formId}}-add" name="add" class="btn btn-primary" ng-disabled="{{vm.formId}}.$invalid" ng-click="vm.save()"><span class="glyphicon glyphicon-plus"></span> Add</button>
+		</div>
+    </div>
+</form>
+
+<div class="table-responsive" style="white-space: nowrap;">
+    <table class="table table-responsive table-bordered table-striped clearfix">
+        <thead>
+            <tr>
+                <th></th>
+           		<th ng-repeat="(fieldName,field) in vm.properties" ng-if="field.hiden != true">{{vm.serverConnection.convertCaseAnyToLabel(field.label)}}</th>
+            </tr>
+        </thead>
+        <tbody id="{{vm.formId}}-crud-table-body">
+            <tr ng-repeat="item in vm.pagination.listPage">
+				<td>
+					<a href ng-click="vm.remove($index)"><span class="glyphicon glyphicon-trash"></span> Delete</a>
+					<a href ng-click="vm.edit($index)" id="{{vm.formId}}-edit-{{$index}}"><span class="glyphicon glyphicon-trash"></span> Edit</a>
+					<a href ng-click="vm.moveUp($index)"><span class="glyphicon glyphicon-arrow-up"></span> Up</a>
+					<a href ng-click="vm.moveDown($index)"><span class="glyphicon glyphicon-arrow-down"></span> Down</a>
+				</td>
+                <td ng-repeat="(fieldName,field) in vm.properties" ng-if="field.hiden != true">
+                	<a href="{{vm.goToField(fieldName, 'view', item, false)}}">{{vm.buildFieldStr(fieldName, item)}}</a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<ul uib-pagination ng-if="vm.filterResults.length > vm.pagination.pageSize" ng-change="vm.pagination.changePage()" items-per-page="vm.pagination.pageSize" total-items="vm.filterResults.length" ng-model="vm.pagination.currentPage" max-size="10" boundary-link-numbers="true" rotate="false"></ul>

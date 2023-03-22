@@ -1,0 +1,43 @@
+<div ng-repeat="(fieldName,field) in vm.properties" ng-if='field.type != "object" && field.type != "array" && field.hiden != true'>
+	<div class="form-group">
+		<div ng-if="field.htmlType.includes('date')" class="col-xs-offset-3 col-xs-9">
+			<select                                             class="form-control" id="{{vm.formId}}-{{fieldName}}-range" name="{{fieldName}}-range" ng-model="vm.instanceFilterRange[fieldName]"      ng-change="vm.setFilterRange(fieldName, vm.instanceFilterRange[fieldName])" ng-options="o for o in field.filterRangeOptions"></select>
+		</div>
+	</div>	    
+
+	<div class="form-group" ng-class="{'has-error': {{vm.formId}}.{{fieldName}}.$invalid}">
+		<label for="{{fieldName}}" class="col-xs-3 control-label">{{vm.serverConnection.convertCaseAnyToLabel(field.label)}}</label>
+
+		<div id="{{vm.formId}}-{{fieldName}}_controls" class="col-xs-9" ng-if="field.filterResultsStr == undefined && field.htmlTypeIsRangeable == false">
+			<input                                              class="form-control" id="{{vm.formId}}-{{fieldName}}"       name="{{fieldName}}"       ng-model="vm.instanceFilter[fieldName]"           type="{{field.htmlType}}" step="{{field.htmlStep}}" placeholder="{{field.placeholder}}">
+		</div>
+
+		<div id="{{vm.formId}}-{{fieldName}}_controls" class="col-xs-4" ng-if="field.filterResultsStr == undefined && field.htmlTypeIsRangeable">
+			<input                                              class="form-control" id="{{vm.formId}}-{{fieldName}}-min"   name="{{fieldName}}-min"   ng-model="vm.instanceFilterRangeMin[fieldName]"   type="{{field.htmlType}}" step="{{field.htmlStep}}" placeholder="{{field.placeholder}}">
+		</div>
+
+		<label ng-if="field.filterResultsStr == undefined && field.htmlTypeIsRangeable" for="{{fieldName}}" class="col-xs-1 control-label" style="text-align: center">à</label>
+
+		<div id="{{vm.formId}}-{{fieldName}}_controls" class="col-xs-4" ng-if="field.filterResultsStr == undefined && field.htmlTypeIsRangeable">
+			<input                                              class="form-control" id="{{vm.formId}}-{{fieldName}}-max"   name="{{fieldName}}-max"   ng-model="vm.instanceFilterRangeMax[fieldName]"   type="{{field.htmlType}}" step="{{field.htmlStep}}" placeholder="{{field.placeholder}}">
+		</div>
+
+		<div id="{{vm.formId}}-{{fieldName}}_controls" class="col-xs-7" ng-if="field.filterResultsStr != undefined">
+			<input  ng-if="field.filterResultsStr.length >  20" class="form-control" id="{{vm.formId}}-{{fieldName}}"       name="{{fieldName}}"       ng-model="field.externalReferencesStr"            ng-change="vm.parseValue(fieldName, vm.instanceFilter)" type="text" list="{{vm.formId}}-{{fieldName}}-list">
+			<select ng-if="field.filterResultsStr.length <= 20" class="form-control" id="{{vm.formId}}-{{fieldName}}"       name="{{fieldName}}"       ng-model="field.externalReferencesStr"            ng-change="vm.parseValue(fieldName, vm.instanceFilter)" ng-options="o for o in field.filterResultsStr"></select>
+			<datalist ng-if="field.filterResultsStr.length >  20" id="{{vm.formId}}-{{fieldName}}-list">
+				<option ng-repeat="o in field.filterResultsStr" value="{{o}}"/>
+			</datalist>
+		</div>
+
+		<div class="col-xs-1" ng-if="field.$ref != undefined">
+			<a id="{{vm.formId}}-search" name="search" class="btn btn-secondary" href="{{vm.goToField(fieldName, 'search')}}"><span class="glyphicon glyphicon-search"></span></a>
+		</div>
+	</div>
+	<!-- field.flags : String[], vm.instanceFlags[fieldName] : Boolean[] -->
+	<div ng-repeat="flagLabel in field.flags">
+		<div ng-if="flagLabel.length > 0" class="form-group form-group-xs">
+			<label class="col-xs-offset-1 control-label"><input type="checkbox" id="{{vm.formId}}-{{fieldName}}-{{$index}}" ng-model="vm.instanceFlags[fieldName][$index]" ng-change="vm.parseValue(fieldName, vm.instanceFilter)"/>{{flagLabel}}</label>
+		</div>
+	</div>
+</div>

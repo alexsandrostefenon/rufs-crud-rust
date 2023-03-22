@@ -1,0 +1,20 @@
+<hr/>
+<h3>{{vm.title}}</h3>
+
+<form id="{{vm.formId}}" name="{{vm.formId}}" class="form-horizontal" role="form" ng-if="edit == true">
+	<div ng-include="'./templates/crud-model_form_body.html'"></div>
+
+    <div ng-if="vm.fieldFirst == undefined || vm.instance[vm.fieldFirst].length > 0" class="form-group">
+        <div class="col-sm-offset-2 col-sm-10">
+            <button id="{{vm.formId}}-add" name="add" class="btn btn-primary" ng-disabled="{{vm.formId}}.$invalid" ng-click="vm.save()"><span class="glyphicon glyphicon-plus"></span> Add</button>
+        </div>
+    </div>
+</form>
+
+<form id="{{vm.formId}}" name="{{vm.formId}}" class="form-horizontal" role="form" ng-if="edit == false">
+	<div ng-include="'./templates/crud-model_form_body_view.html'"></div>
+</form>
+
+<crud-item-json ng-repeat="item in vm.listItemCrudJson" vm="item" edit="edit"></crud-item-json>
+<crud-obj-json ng-repeat="item in vm.listCrudObjJson" vm="item" edit="edit"></crud-obj-json>
+<crud-json-array ng-repeat="item in vm.listCrudJsonArray" vm="item" edit="edit"></crud-json-array>

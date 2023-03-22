@@ -1,0 +1,48 @@
+<div ng-repeat="(fieldName,field) in vm.properties" ng-if='(field.type != "object" && field.type != "array" && field.hiden != true && (vm.fieldFirst == undefined || vm.instance[vm.fieldFirst] != undefined)) || fieldName == vm.fieldFirst'>
+	<div class="form-group row" ng-class="{'has-error': {{vm.formId}}.{{fieldName}}.$invalid}">
+	    <label for="{{fieldName}}" class="col-xs-4 col-form-label">{{vm.serverConnection.convertCaseAnyToLabel(field.label)}}</label>
+
+	    <div id="{{vm.formId}}-{{fieldName}}_controls" class="col-xs-6" ng-if="field.filterResultsStr == undefined">
+			<input                                              class="form-control" id="{{vm.formId}}-{{fieldName}}" name="{{fieldName}}" ng-required="field.essential == true && field.nullable != true" ng-model="vm.instance[fieldName]"      ng-disabled="{{field.readOnly == true}}" type="{{field.htmlType}}" ng-change="vm.validateFieldChange(fieldName)" step="{{field.htmlStep}}" maxlength="{{field.maxLength}}" placeholder="{{field.placeholder}}" autocomplete="off">
+	    </div>
+	    
+		<div ng-if="field.htmlType == 'number' && field.$ref == undefined && field.readOnly == false">
+	      <div class="col-xs-1">
+			<button class="form-control btn btn-default" ng-click="vm.instance[fieldName] = vm.instance[fieldName] + field.htmlStep"><span class="glyphicon glyphicon-plus"></span></button>
+	      </div>
+	      
+	      <div class="col-xs-1">
+			<button class="form-control btn btn-default" ng-click="vm.instance[fieldName] = vm.instance[fieldName] - field.htmlStep"><span class="glyphicon glyphicon-minus"></span></button>
+	      </div>
+		</div>	    
+
+	    <div id="{{vm.formId}}-{{fieldName}}_controls" class="col-xs-6 " ng-if="field.filterResultsStr != undefined">
+            <input  ng-if="field.filterResultsStr.length >  20" class="form-control" id="{{vm.formId}}-{{fieldName}}" name="{{fieldName}}" ng-required="field.essential == true && field.nullable != true" ng-model="field.externalReferencesStr" ng-disabled="{{field.readOnly == true}}" type="text" ng-change="vm.parseValue(fieldName, vm.instance)" list="{{vm.formId}}-{{fieldName}}-list" autocomplete="off">
+			<select ng-if="field.filterResultsStr.length <= 20" class="form-control" id="{{vm.formId}}-{{fieldName}}" name="{{fieldName}}" ng-required="field.essential == true && field.nullable != true" ng-model="field.externalReferencesStr" ng-disabled="{{field.readOnly == true}}"             ng-change="vm.parseValue(fieldName, vm.instance)" ng-options="o for o in field.filterResultsStr"></select>
+            <datalist ng-if="field.filterResultsStr.length >  20" id="{{vm.formId}}-{{fieldName}}-list">
+                <option ng-repeat="o in field.filterResultsStr" value="{{o}}"/>
+            </datalist>
+	    </div>
+
+        <div class="col-xs-1" ng-if="field.$ref != undefined && vm.instance[fieldName] != undefined">
+            <a id="{{vm.formId}}-view" name="view" class="btn btn-secondary" href="{{vm.goToField(fieldName, 'view', vm.instance, false)}}"><span class="glyphicon glyphicon-eye-open"></span></a>
+        </div>
+
+        <div class="col-xs-1" ng-if="field.$ref != undefined && field.readOnly != true && vm.instance[fieldName] == undefined">
+            <a id="{{vm.formId}}-create" name="create" class="btn btn-secondary" href="{{vm.goToField(fieldName, 'new')}}"><span class="glyphicon glyphicon-plus"></span></a>
+        </div>
+
+        <div class="col-xs-1" ng-if="field.$ref != undefined && field.readOnly != true">
+            <a id="{{vm.formId}}-{{fieldName}}-search" name="search" class="btn btn-secondary" href ng-click="vm.goToField(fieldName, 'search', vm.instance, true)"><span class="glyphicon glyphicon-search"></span></a>
+        </div>
+	</div>
+	<!-- field.flags : String[], vm.instanceFlags[fieldName] : Boolean[] -->
+	<div ng-repeat="flagLabel in field.flags">
+		<div ng-if="flagLabel.length > 0" class="form-group form-group-xs row">
+			<label class="col-xs-offset-1 control-label">
+				<input type="checkbox" id="{{vm.formId}}-{{fieldName}}-{{$index}}" ng-model="vm.instanceFlags[fieldName][$index]" ng-change="vm.parseValue(fieldName, vm.instance)"/>
+				{{flagLabel}}
+			</label>
+		</div>
+	</div>
+</div>

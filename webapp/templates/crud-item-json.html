@@ -1,0 +1,45 @@
+<div ng-if="edit == true || vm.filterResults.length > 0">
+	<hr/>
+	<h3>{{vm.title}}</h3>
+</div>
+
+<form id="{{vm.formId}}" name="{{vm.formId}}" class="form-horizontal" role="form" ng-if="edit == true">
+	<div ng-include="'./templates/crud-model_form_body.html'"></div>
+
+    <div ng-if="vm.fieldFirst == undefined || vm.instance[vm.fieldFirst].length > 0" class="form-group">
+        <div class="col-sm-offset-2 col-sm-10">
+            <button id="{{vm.formId}}-add" name="add" class="btn btn-primary" ng-disabled="{{vm.formId}}.$invalid" ng-click="vm.save()"><span class="glyphicon glyphicon-plus"></span> Add</button>
+        </div>
+    </div>
+</form>
+
+<div ng-if="edit == true || vm.filterResults.length > 0" class="table-responsive" style="white-space: nowrap;">
+	<table class="table table-responsive table-bordered table-striped clearfix">
+	    <thead>
+	        <tr>
+	            <th></th>
+           		<th ng-repeat="fieldName in vm.fieldsTable">
+					<a href ng-click="vm.sortLeft(fieldName)"><span class="glyphicon glyphicon-arrow-left"></span> </a>
+					<a href ng-click="vm.sortToggle(fieldName)"> {{vm.serverConnection.convertCaseAnyToLabel(vm.properties[fieldName].label)}}</a>
+					<a href ng-click="vm.sortRigth(fieldName)"><span class="glyphicon glyphicon-arrow-right"></span> </a>
+           		</th>
+	        </tr>
+	    </thead>
+	    <tbody id="{{vm.formId}}-crud-table-body">
+	            <tr ng-repeat="item in vm.pagination.listPage">
+				<td>
+					<a ng-if="edit == true" href ng-click="vm.edit(item._name)" id="{{vm.formId}}-edit-{{item._name}}"><span class="glyphicon glyphicon-trash"></span> Edit</a>
+					<a ng-if="edit == true" href ng-click="vm.remove(item._name)" id="{{vm.formId}}-remove-{{item._name}}"><span class="glyphicon glyphicon-trash"></span> Delete</a>
+					<a ng-if="edit == true" href ng-click="vm.moveUp(item._name)" id="{{vm.formId}}-move_up-{{item._name}}"><span class="glyphicon glyphicon-arrow-up"></span> Up</a>
+					<a ng-if="edit == true" href ng-click="vm.moveDown(item._name)" id="{{vm.formId}}-move_down-{{item._name}}"><span class="glyphicon glyphicon-arrow-down"></span> Down</a>
+				</td>
+                <td ng-repeat="fieldName in vm.fieldsTable">
+                	<pre ng-if="vm.properties[fieldName].type == 'object' && item[fieldName] != undefined">{{vm.buildFieldStr(fieldName, item)}}</pre>
+					<a ng-if="vm.properties[fieldName].type != 'object'" href="{{vm.goToField(fieldName, 'view', item, false)}}">{{vm.buildFieldStr(fieldName, item)}}</a>
+	            </td>
+	        </tr>
+	    </tbody>
+	</table>
+</div>
+
+<ul uib-pagination ng-if="vm.filterResults.length > vm.pagination.pageSize" ng-change="vm.pagination.changePage()" items-per-page="vm.pagination.pageSize" total-items="vm.filterResults.length" ng-model="vm.pagination.currentPage" max-size="10" boundary-link-numbers="true" rotate="false"></ul>
