@@ -1,5 +1,4 @@
-import {HttpRestRequest} from "./ServerConnection.js";
-import {ServerConnectionUI, CrudServiceUI} from "./ServerConnectionUI.js";
+import {ServerConnectionUI} from "./ServerConnectionUI.js";
 import {CrudController} from "./CrudController.js";
 
 class ServerConnectionService extends ServerConnectionUI {
@@ -49,20 +48,6 @@ class MenuController {
     	this.serverConnection = serverConnection;
     	this.isCollapsed = true;
     }
-
-    label(str) {
-    	return this.serverConnection.convertCaseAnyToLabel(str);
-    }
-
-	removeAcentos(text) {
-		if (text == null) {
-			console.error(`MenuController.removeAcentos(${text})`);
-			return "";
-		}
-		
-		const ret = text.normalize("NFD").replace(/[ \u0300-\u036f]/g, "");
-		return ret;
-	}
 
 }
 
