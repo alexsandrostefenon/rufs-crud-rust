@@ -7,9 +7,25 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+test-selelium = []
+
 [patch.crates-io]
 # js-sys = { git = "https://github.com/71/wasm-bindgen", package = "js-sys" }
 # wasm-bindgen = { git = "https://github.com/71/wasm-bindgen" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+rufs-base-rust = { path = "../rufs-base-rust", default-features = true }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4.34"
+wasm-bindgen-test = "0.3"
+js-sys = "0.3"
+serde-wasm-bindgen = "0.4.5"
+web-log = "1.0.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rufs-base-rust = { path = "../rufs-base-rust", default-features = true, features = ["http_server","tide","postgres","db_file_json"] }
+tokio = { version = "1.24", features = ["full"] }
 
 [dependencies]
 thiserror = "1.0.38"
@@ -18,16 +34,9 @@ reqwest = { version = "0.11.17", features = ["json"] }
 workflow-websocket = "0.3.17"
 serde = { version = "1.0.147", features = ["derive"] }
 serde_json = "1.0.87"
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4.34"
-wasm-bindgen-test = "0.3"
-js-sys = "0.3"
-serde-wasm-bindgen = "0.4.5"
-web-log = "1.0.1"
 async-std = { version = "1.12.0", features = ["attributes"], optional = true }
 async-recursion = "1.0.4"
 chrono = { version = "0.4.23", features = ["wasmbind", "serde"] }
-rufs-base-rust = { path = "../rufs-base-rust", default-features = false, features = ["wasm", "openapi"] }
 indexmap = "1.9.2"
 openapiv3 = "1.0"
 convert_case = "0.6"

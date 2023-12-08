@@ -1,6 +1,6 @@
 use std::{vec, collections::HashMap, cmp::Ordering};
 use anyhow::{anyhow, Context};
-use chrono::{Utc, NaiveDateTime};
+use chrono::{Utc};
 use openapiv3::{Schema, ReferenceOr, OpenAPI, SchemaKind, Type, VariantOrUnknownOrEmpty, StringFormat};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
@@ -666,7 +666,7 @@ pub enum DataViewType {
 pub struct DataView {
     form_id: String, // parent_name + schema_name + edit
     typ: DataViewType,
-    schema_name: String,
+    pub schema_name: String,
     parent_name: Option<String>,
     // schema
     path: Option<String>,
@@ -683,14 +683,14 @@ pub struct DataView {
     //label :String,
     // data instance
     active_primary_key: Option<Value>, // active index of filter_results
-    instance: Value,
+    pub instance: Value,
     instance_flags: HashMap<String, Vec<bool>>,
     original: Value,
     // data list
     active_index: Option<usize>, // active index of filter_results
     filter_results: Vec<Value>,
     field_filter_results: IndexMap<String, Value>,
-    field_results: IndexMap<String, Vec<Value>>,
+    pub field_results: IndexMap<String, Vec<Value>>,
     field_results_str: IndexMap<String, Vec<String>>,
     field_external_references_str: IndexMap<String, String>,
     //list: Vec<Value>,
@@ -709,7 +709,7 @@ pub struct DataView {
     fields_sort: HashMap<String, FieldSort>,
     // ui
     fields_table: Vec<String>,
-    childs: Vec<DataView>
+    pub childs: Vec<DataView>
 }
 
 impl DataView {
@@ -1881,7 +1881,7 @@ impl DataView {
 		return self.clear();
 	}
 */
-    fn set_value(&mut self, child_name: Option<&str>, server_connection: &ServerConnection, watcher: &impl DataViewWatch, field_name: &str, value: &Value) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn set_value(&mut self, child_name: Option<&str>, server_connection: &ServerConnection, watcher: &dyn DataViewWatch, field_name: &str, value: &Value) -> Result<(), Box<dyn std::error::Error>> {
         fn get_value_old_or_default_or_null(field: &Schema, value_old: &Value) -> Value {
             let value_default = if let Some(default) = &field.schema_data.default {
                 println!("get_default_value : {}", default);
@@ -2086,8 +2086,8 @@ impl DataView {
         Ok(())
     }
 
-    fn set_values(&mut self, server_connection: &ServerConnection, watcher: &impl DataViewWatch, obj: &Value) -> Result<(), Box<dyn std::error::Error>> {
-        fn set_values_process(data_view: &mut DataView, child_name: Option<&str>, server_connection: &ServerConnection, watcher: &impl DataViewWatch, obj: &Value) -> Result<(), Box<dyn std::error::Error>> {
+    fn set_values(&mut self, server_connection: &ServerConnection, watcher: &dyn DataViewWatch, obj: &Value) -> Result<(), Box<dyn std::error::Error>> {
+        fn set_values_process(data_view: &mut DataView, child_name: Option<&str>, server_connection: &ServerConnection, watcher: &dyn DataViewWatch, obj: &Value) -> Result<(), Box<dyn std::error::Error>> {
             let keys = if let Some(child_name) = child_name {
                 let data_view = data_view.childs.iter_mut().find(|item| item.schema_name == child_name).context(format!("set_values 1 : Missing item {} in data_view {}", child_name, data_view.schema_name))?;
                 data_view.properties.iter().map(|item| item.0.to_string()).collect::<Vec<String>>()
@@ -2254,7 +2254,7 @@ pub struct LoginResponseClient {
 #[derive(Default)]
 pub struct ServerConnection {
     http_rest :HttpRestRequest,
-    login_response :LoginResponseClient,
+    pub login_response :LoginResponseClient,
     service_map: HashMap<String, Service>,
     //pathname: String,
     //remote_listeners: Vec<dyn RemoteListener>,
@@ -2669,18 +2669,19 @@ impl ServerConnection {
 */
 }
 
-pub trait DataViewWatch {
+pub trait DataViewWatch : std::marker::Sync {
     fn check_set_value(&self, data_view :&mut DataView, child_name: Option<&str>, server_connection :&ServerConnection, field_name: &str, field_value: &Value) -> Result<bool, Box<dyn std::error::Error>>;
     fn check_save(&self, data_view :&mut DataView, child_name: Option<&str>, server_connection: &ServerConnection) -> Result<(bool, DataViewProcessAction), Box<dyn std::error::Error>>;
 }
 
 //#[derive(Default)]
 pub struct DataViewManager {
-    server_connection: ServerConnection,
+    pub server_connection: ServerConnection,
     //active_form: Option<String>,
     data_view_map: HashMap<String, DataView>,
 }
 
+#[macro_export]
 macro_rules! data_view_get {
     ($data_view_manager:tt, $cap:tt) => {
         {
@@ -2703,6 +2704,7 @@ macro_rules! data_view_get {
     }
 }    
 
+#[macro_export]
 macro_rules! data_view_get_mut {
     ($data_view_manager:tt, $cap:tt) => {
         {
@@ -2742,7 +2744,7 @@ impl DataViewManager {
         self.server_connection = ServerConnection::new(path);
     }
 
-    async fn process(&mut self, watcher: &(impl DataViewWatch + std::marker::Sync), cap: &regex::Captures<'_>, action :DataViewProcessAction, params_search :&DataViewProcessParams, params_extra :&Value) -> Result<Option<DataViewResponse>, Box<dyn std::error::Error>> {
+    async fn process(&mut self, watcher: &dyn DataViewWatch, cap: &regex::Captures<'_>, action :DataViewProcessAction, params_search :&DataViewProcessParams, params_extra :&Value) -> Result<Option<DataViewResponse>, Box<dyn std::error::Error>> {
         fn build_field_filter_results(server_connection: &ServerConnection, data_view: &mut DataView) -> Result<(), Box<dyn std::error::Error>> {
             let service = server_connection.service_map.get(&data_view.schema_name).context(format!("[build_field_filter_results] Missing service {} in server_connection.service_map.", data_view.schema_name))?;
             //console.log(`buildFieldFilterResults :`, data_view.properties);
@@ -2857,7 +2859,7 @@ impl DataViewManager {
         }
 
         //#[async_recursion::async_recursion]
-        async fn data_view_get(watcher: &(impl DataViewWatch + std::marker::Sync), data_view: &mut DataView, server_connection: &mut ServerConnection, primary_key: &Value) -> Result<(), Box<dyn std::error::Error>> {
+        async fn data_view_get(watcher: &dyn DataViewWatch, data_view: &mut DataView, server_connection: &mut ServerConnection, primary_key: &Value) -> Result<(), Box<dyn std::error::Error>> {
             let service = server_connection.service_map.get(&data_view.schema_name).context(format!("[data_view_get] Missing service {} in server_connection.service_map.", data_view.schema_name))?;
             println!("[process.data_view_get] DEBUG  1, schema = {}, primaryKey = {}", data_view.schema_name, primary_key);
             let primary_key = service.get_primary_key(primary_key).context(format!("wrong primary key {} for service {}", primary_key, service.schema_name))?;
@@ -3094,7 +3096,7 @@ impl DataViewManager {
         Ok(Some(data_view_response))
     }
 
-    pub async fn process_click_target(data_view_manager :&mut DataViewManager, target: &str, watcher: &(impl DataViewWatch + std::marker::Sync)) -> Result<Option<DataViewResponse>, Box<dyn std::error::Error>> {
+    pub async fn process_click_target(data_view_manager :&mut DataViewManager, target: &str, watcher: &dyn DataViewWatch) -> Result<Option<DataViewResponse>, Box<dyn std::error::Error>> {
         let re = regex::Regex::new(r"#!/app/((?P<parent>\w+)-)?(?P<name>\w+)/(?P<action>\w+)(?P<query_string>\?[\w\.=&]+)?")?;
 
         if let Some(cap) = re.captures(target) {
@@ -3330,9 +3332,9 @@ impl DataViewManager {
         Ok(None)
     }
 
-    pub async fn process_edit_target(data_view_manager :&mut DataViewManager, target: &str, watcher: &impl DataViewWatch, value: &str) -> Result<Option<DataViewResponse>, Box<dyn std::error::Error>> {
+    pub async fn process_edit_target(data_view_manager :&mut DataViewManager, target: &str, watcher: &dyn DataViewWatch, value: &str) -> Result<Option<DataViewResponse>, Box<dyn std::error::Error>> {
         // fazer clone da função para parse_value_filter()
-        fn parse_value(data_view :&mut DataView, child_name: Option<&str>, server_connection: &ServerConnection, watcher: &impl DataViewWatch, field_name: &str, value :&str) -> Result<(), Box<dyn std::error::Error>> {
+        fn parse_value(data_view :&mut DataView, child_name: Option<&str>, server_connection: &ServerConnection, watcher: &dyn DataViewWatch, field_name: &str, value :&str) -> Result<(), Box<dyn std::error::Error>> {
             // faz o inverso da funcao strAsciiHexToFlags
             fn flags_to_str_ascii_hex(flags: &Vec<bool>) -> String {
                 let mut value = 0;
@@ -3451,227 +3453,24 @@ impl DataViewManager {
 
 }
 
-struct RufsNfe {}
-
-#[derive(Deserialize,Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Request {
-     rufs_group_owner: usize,
-     id              : usize,
-     #[serde(rename = "type")]
-     typ            : usize,
-     state           : usize,
-     person           : String,
-     person_dest      : String,
-     date             : NaiveDateTime,
-     additional_data  : Option<String>,
-     products_value   : Option<f64>,
-     services_value   : Option<f64>,
-     transport_value  : Option<f64>,
-     desc_value       : Option<f64>,
-     sum_value        : Option<f64>,
-     payments_value   : Option<f64>,
- }
-
-#[derive(Debug,Deserialize,Serialize)]
-#[serde(rename_all = "camelCase")]
-struct RequestProduct {
-    id :Option<usize>,
-    rufs_group_owner :usize,
-    request :usize,
-    product :usize,
-    quantity :f64,
-    value :f64,
-    value_item :Option<f64>,
-    value_desc :Option<f64>,
-    value_freight :Option<f64>,
-    cfop :Option<usize>,
-    value_all_tax :Option<f64>,
-    serials :Option<String>,   
- }
-
-impl RufsNfe {
-    
-    fn request_payment_adjusts(data_view_payment : &mut DataView, watcher : &impl DataViewWatch, server_connection: &ServerConnection, request: &Request, typ :Option<u64>) -> Result<(), Box<dyn std::error::Error>> {
-        let remaining_payment = request.sum_value.unwrap_or(0.0) - request.payments_value.unwrap_or(0.0);
-        let value = data_view_payment.instance.get("value").unwrap_or(&json!(0.0)).as_f64().unwrap_or(0.0);
-
-        if value == 0.0 {
-            let value = json!(remaining_payment);
-            data_view_payment.set_value(None, server_connection, watcher, "value", &value)?;
-        }
-
-        let account = data_view_payment.instance.get("account").unwrap_or(&Value::Null);
-        println!("[request_payment_adjusts] 5 : old account  = {}", account);
-
-        if account.is_null() {
-            let accounts = data_view_payment.field_results.get("account").context("expected list of accounts")?;
-
-            let typ = if let Some(typ) = typ {
-                typ
-            } else {
-                data_view_payment.instance.get("type").unwrap_or(&json!(1)).as_u64().unwrap_or(1)
-            };
-    
-            if typ == 1 {
-                if accounts.len() > 0 {
-                    let account = accounts[accounts.len()-1].get("id").context("missing field id in account")?.clone();//accounts[0].id;//
-                    data_view_payment.set_value(None, server_connection, watcher, "account", &account)?;
-                }
-            } else {
-                if accounts.len() > 1 {
-                    let account = accounts[accounts.len()-2].get("id").context("missing field id in account")?.clone();//accounts.len()-2
-                    data_view_payment.set_value(None, server_connection, watcher, "account", &account)?;
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-}
-
-impl DataViewWatch for RufsNfe {
-
-    fn check_set_value(&self, data_view :&mut DataView, child_name: Option<&str>, server_connection: &ServerConnection, field_name: &str, field_value: &Value) -> Result<bool, Box<dyn std::error::Error>> {
-        println!("check_set_value 1 {}.{:?}.{} = {}", data_view.schema_name, child_name, field_name, field_value);
-
-        if data_view.schema_name == "request" {
-            println!("check_set_value 1.1 {}.{:?}.{} = {}", data_view.schema_name, child_name, field_name, field_value);
-
-            if let Some(child_name) = child_name {
-                println!("check_set_value 1.1.1 {}.{:?}.{} = {}", data_view.schema_name, child_name, field_name, field_value);
-                println!("check_set_value 1.1.2 {}.{:?}.{} = {}", data_view.schema_name, child_name, field_name, field_value);
-
-                if child_name == "requestProduct" && data_view.instance.get("product").is_some() && ["quantity", "value"].contains(&field_name) {
-                    if let Some(data_view) = data_view.childs.iter_mut().find(|item| item.schema_name == child_name) {
-                        if data_view.instance.get("value").is_none() {
-                            // TODO : se valor unitário está ausente, pegar o valor do cadastro de produtos.
-                            data_view.set_value(None, server_connection, self, "value", &json!(0.0))?;
-                        }
-
-                        if data_view.instance.get("quantity").is_none() {
-                            data_view.set_value(None, server_connection, self, "quantity", &json!(1.0))?;
-                        }
-
-                        let field_value :f64 = match field_value {
-                            Value::Number(field_value) => field_value.as_f64().context("expected type is f64")?,
-                            _ => todo!(),
-                        };
-
-                        let mut request_product: RequestProduct = serde_json::from_value(data_view.instance.clone())?;
-
-                        if field_name == "quantity" {
-                            request_product.value_item = Some(request_product.value * field_value);
-                        } else if field_name == "value" {
-                            request_product.value_item = Some(request_product.quantity * field_value);
-                        }
-
-                        data_view.instance = serde_json::to_value(request_product)?;
-                    }
-                }
-
-                println!("check_set_value 1.1.3 {}.{:?}.{} = {}", data_view.schema_name, child_name, field_name, field_value);
-
-                if child_name == "requestPayment" && ["type"].contains(&field_name) {
-                    println!("check_set_value 1.1.3.1 {}.{:?}.{} = {}", data_view.schema_name, child_name, field_name, field_value);
-
-                    if let Some(data_view_child) = data_view.childs.iter_mut().find(|item| item.schema_name == child_name) {
-                        println!("check_set_value 1.1.3.1.1 {}.{:?}.{} = {}", data_view.schema_name, child_name, field_name, field_value);
-                        let typ = field_value.as_u64().unwrap_or(1);
-                        // due_date
-                        if [1,4,10,11,12,13].contains(&typ) {
-                            let value = data_view.instance.get("date").context("check_set_value 1 : context")?;
-                            data_view_child.set_value(None, server_connection, self, "dueDate", value)?;
-                        }
-                        // payday
-                        if [1,4,10,11,12,13].contains(&typ) {
-                            let value = data_view.instance.get("date").context("check_set_value 2 : context")?;
-                            //data_view_child.instance["payday"] = value.clone();
-                            data_view_child.set_value(None, server_connection, self, "payday", value)?;
-                        }
-
-                        let request: Request = serde_json::from_value(data_view.instance.clone())?;
-                        println!("check_set_value 1.1.3.1.8 {}", data_view_child.instance);
-                        RufsNfe::request_payment_adjusts(data_view_child, self, server_connection, &request, Some(typ))?;
-                        println!("check_set_value 1.1.3.1.9 {}", data_view_child.instance);
-                    }
-                }
-            } else {
-                /*
-                if ["sumValue"].contains(&field_name) {
-                    if let Some(data_view_payment) = data_view.childs.iter_mut().find(|item| item.schema_name == "requestPayment") {
-                        let request: Request = serde_json::from_value(data_view.instance.clone())?;
-                        RufsNfe::request_payment_adjusts(data_view_payment, self, server_connection, &request, None)?;
-                    }
-                }
-                 */
-            }
-        }
-
-        Ok(true)
-    }
-     
-    fn check_save(&self, data_view :&mut DataView, child_name: Option<&str>, server_connection: &ServerConnection) -> Result<(bool, DataViewProcessAction), Box<dyn std::error::Error>> {
-        let action = if ["rufsUser", "request"].contains(&data_view.schema_name.as_str()) {
-            if let Some(schema_name_child) = child_name {
-                if data_view.schema_name == "request" {
-
-                    if schema_name_child == "requestProduct" {
-                        let item = data_view.childs.iter().find(|item| item.schema_name == schema_name_child).context(format!("Missing child {} in parent {}", schema_name_child, data_view.schema_name))?;
-                        println!("[RufsNfe.check_save.request.requestProduct] 1 : instance = {}", item.instance);
-                        let request_product: RequestProduct = serde_json::from_value(item.instance.clone())?;
-                        println!("[RufsNfe.check_save.request.requestProduct] 2 : RequestProduct = {:?}", request_product);
-                        let product_value = f64::trunc(request_product.quantity * request_product.value * 1000.0) / 1000.0;
-                        let products_desc_value = request_product.value_desc.unwrap_or(0.0);
-                        let request: Request = serde_json::from_value(data_view.instance.clone())?;
-                        let products_value_old = request.products_value.unwrap_or(0.0);
-                        let desc_value_old = request.desc_value.unwrap_or(0.0);
-                        let sum_value_old = request.sum_value.unwrap_or(0.0);
-                        data_view.set_value(None, server_connection, self, "productsValue", &json!(products_value_old + product_value))?;
-                        data_view.set_value(None, server_connection, self, "descValue", &json!(desc_value_old - products_desc_value))?;
-                        let sum_value = f64::trunc((sum_value_old + product_value - products_desc_value)*1000.0)/1000.0;
-                        data_view.set_value(None, server_connection, self, "sumValue", &json!(sum_value))?;
-                        let data_view_payment = data_view.childs.iter_mut().find(|item| item.schema_name == "requestPayment").context(format!("Missing child {} in parent {}", "requestPayment", data_view.schema_name))?;
-                        let request: Request = serde_json::from_value(data_view.instance.clone())?;
-                        RufsNfe::request_payment_adjusts(data_view_payment, self, server_connection, &request, None)?;
-                    }
-/*
-                    let data_view_request_payment = data_view.childs.iter_mut().find(|item| item.schema_name == "requestPayment").context(format!("Missing child requestPayment in parent {}", data_view.schema_name))?;
-
-                    if schema_name_child != "requestPayment" {
-                    }
-*/
-                }
-            }
-
-            DataViewProcessAction::Edit
-        } else {
-            DataViewProcessAction::Search
-        };
-
-        Ok((true, action))
-    }
-     
- }
-
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen(js_name = DataViewManager)]
+#[cfg(target_arch = "wasm32")]
 pub struct DataViewManagerWrapper {
-    watcher: RufsNfe,
-    data_view_manager :DataViewManager,
+    pub data_view_manager :DataViewManager,
     //data_view_html_map: HashMap<String, String>,
+    watcher: Box<dyn DataViewWatch>,
 }
 
-#[wasm_bindgen(js_class = DataViewManager)]
+#[cfg(target_arch = "wasm32")]
 impl DataViewManagerWrapper {
-    #[wasm_bindgen(constructor)]
-	pub fn new(path: &str) -> Self {
+
+	pub fn new(path: &str, watcher: Box<dyn DataViewWatch>) -> Self {
         Self {
-            watcher: RufsNfe{},
             data_view_manager :DataViewManager::new(path),
             //data_view_html_map :Default::default()
+            watcher,
         }
     }
 
@@ -3682,25 +3481,6 @@ impl DataViewManagerWrapper {
         };
         
         let menu = json!({
-            "Cadastros": {
-                "Clientes e Fornecedores": "person/search",
-                "Produtos": "product/search",
-                "Contas": "account/search",
-                "Requisições": "request/search",
-                "Usuários": "rufs_user/search",
-            },
-            "Movimento": {
-                "Financeiro": "request_payment/search",
-                "Estoque": "stock/search",
-            },
-            "Rotinas": {
-                "Compra": "request/new?overwrite.type=1&overwrite.state=10",
-                "Venda": "request/new?overwrite.type=2&overwrite.state=10",
-                "Importar": "request/import?overwrite.type=1&overwrite.state=10",
-            },
-            "Tabelas": {
-                "Confaz Cest": "confaz_cest/search"
-            }
         });
 
         let login_response = json!({"menu": menu, "path": self.data_view_manager.server_connection.login_response.path});
@@ -3709,7 +3489,7 @@ impl DataViewManagerWrapper {
 
     pub async fn process_click_target(&mut self, target: &str) -> Result<JsValue, JsValue> {
         println!("DEBUG DataViewManagerWrapper::process_click_target 1 {}", target);
-        let res = DataViewManager::process_click_target(&mut self.data_view_manager, target, &self.watcher).await;
+        let res = DataViewManager::process_click_target(&mut self.data_view_manager, target, self.watcher.as_ref()).await;
         println!("DEBUG DataViewManagerWrapper::process_click_target 2 {}", target);
 
         let data_view_response = match res {
@@ -3727,14 +3507,8 @@ impl DataViewManagerWrapper {
     }
 
     pub async fn process_edit_target(&mut self, target: &str, value: &str) -> Result<JsValue, JsValue> {
-        /*
-        let value = match serde_wasm_bindgen::from_value::<Value>(value) {
-            Ok(value) => value,
-            Err(err) => return Err(JsValue::from_str(&err.to_string())),
-        };
-        */
         println!("DEBUG DataViewManagerWrapper::process_edit_target 1 {} = {}", target, value);
-        let res = DataViewManager::process_edit_target(&mut self.data_view_manager, target, &self.watcher, value).await;
+        let res = DataViewManager::process_edit_target(&mut self.data_view_manager, target, self.watcher.as_ref(), value).await;
         println!("DEBUG DataViewManagerWrapper::process_edit_target 2 {}", target);
 
         let data_view_response = match res {
@@ -3753,182 +3527,9 @@ impl DataViewManagerWrapper {
 
 }
 
-/*
-#[wasm_bindgen(js_name = DataView)]
-pub struct DataViewWrapper {
-    data_view :DataView,
-    primary_keys :JsValue,
-    short_description_list :JsValue,
-    properties :JsValue,
-    list: Vec<JsValue>,
-}
-
-#[wasm_bindgen(js_class = DataView)]
-impl DataViewWrapper {
-    #[wasm_bindgen(constructor)]
-	pub fn new(path: &str) -> Self {
-        Self {
-            data_view: DataStore::new(path, None), 
-            primary_keys: JsValue::NULL,
-            short_description_list: JsValue::NULL,
-            properties: JsValue::NULL, 
-            list: vec![],
-        }
-    }
-
-    fn convert_list_to_js(&mut self) {
-        web_sys::console::log_1(&format!("[DataStoreWrapper.convert_list_to_js({})] list_in :", self.data_view.path).into());
-
-        for value in &self.data_view.list {
-            web_sys::console::log_1(&format!("{:?}", value).into());
-        }
-        
-        self.list = self.data_view.list.iter().map(|value| serde_wasm_bindgen::to_value(value).unwrap()).collect();
-        //        self.list = self.data_view.list.iter().map(|value| js_sys::JSON::parse(&serde_json::to_string(&value).unwrap()).unwrap()).collect();
-        web_sys::console::log_1(&format!("[DataStoreWrapper.convert_list_to_js({})] list_out :", self.data_view.path).into());
-
-        for value in &self.list {
-            web_sys::console::log_1(value);
-        }
-
-        web_sys::console::log_1(&format!("[DataStoreWrapper.convert_list_to_js({})] list_out.length : {}", self.data_view.path, self.list.len()).into());
-    }
-    
-	pub fn clear(&mut self) {
-        self.data_view.clear()
-	}
-
-/* 	pub async fn process(&mut self, server_connection_wrapper: &mut ServerConnectionWrapper, data_view_manager_wrapper: &mut DataStoreManagerWrapper, action: &str, params: JsValue) {
-        let params = serde_wasm_bindgen::from_value::<DataStoreProcessParams>(params).unwrap();
-        self.data_view.process(&mut server_connection_wrapper.server_connection, &mut data_view_manager_wrapper.data_view_manager, action, &params).await
-	}
- */
-	pub fn find(&self, params: JsValue) -> Vec<JsValue> {
-        let params = serde_wasm_bindgen::from_value::<Value>(params).unwrap();
-        self.data_view.find(&params).iter().map(|value| serde_wasm_bindgen::to_value(value).unwrap()).collect()
-	}
-
-	pub fn find_pos(&self, key: JsValue) -> JsValue {
-        web_sys::console::log_1(&format!("[DataStoreWrapper.find_pos({:?})] 1", key).into());
-        let key = serde_wasm_bindgen::from_value::<Value>(key).unwrap();
-        web_sys::console::log_1(&format!("[DataStoreWrapper.find_pos({})] 2", key).into());
-
-        if let Some(pos) = self.data_view.find_pos(&key) {
-            web_sys::console::log_1(&format!("[DataStoreWrapper.find_pos({})] : 1", key).into());
-            JsValue::from(pos)
-        } else {
-            web_sys::console::log_1(&format!("[DataStoreWrapper.find_pos({})] : 2", key).into());
-            JsValue::NULL
-        }
-	}
-
-	pub fn find_one(&self, key: JsValue) -> JsValue {
-        let key = serde_wasm_bindgen::from_value::<Value>(key).unwrap();
-
-        if let Some(value) = self.data_view.find_one(&key) {
-            serde_wasm_bindgen::to_value(value).unwrap()
-        } else {
-            JsValue::NULL
-        }
-	}
-	// private, use in get, save, update and remove
-	pub fn update_list(&mut self, value: JsValue, pos: JsValue) -> JsValue {
-        let value = serde_wasm_bindgen::from_value::<Value>(value).unwrap();
-
-        let pos = if pos.is_null() {
-            None
-        } else {
-            let pos = pos.as_f64().unwrap();
-            Some(pos as usize)
-        };
-
-        let pos = JsValue::from(self.data_view.update_list(value, pos));
-        self.convert_list_to_js();
-        pos
-	}
-
-	pub fn set_schema(&mut self, server_connection_wrapper: &mut ServerConnectionWrapper, method: &str, schema_place: &str) {
-        self.data_view.set_schema(&mut server_connection_wrapper.server_connection, method, &SchemaPlace::from_str(schema_place));
-        self.primary_keys = js_sys::JSON::parse(&serde_json::to_string(&self.data_view.primary_keys).unwrap()).unwrap();
-        self.short_description_list = js_sys::JSON::parse(&serde_json::to_string(&self.data_view.short_description_list).unwrap()).unwrap();
-        self.properties = js_sys::JSON::parse(&serde_json::to_string(&self.data_view.properties).unwrap()).unwrap();
-    }
-
-	pub fn get_primary_key(&self, obj: JsValue) -> JsValue {
-        let obj = serde_wasm_bindgen::from_value::<Value>(obj).unwrap();
-
-        if let Some(value) = self.data_view.get_primary_key(&obj) {
-            let value = serde_wasm_bindgen::to_value(&value).unwrap();
-            value
-        } else {
-            JsValue::NULL
-        }
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn name(&self) -> String {
-        self.data_view.name.clone()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn path(&self) -> String {
-        self.data_view.path.clone()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn primary_keys(&self) -> JsValue {
-        self.primary_keys.clone()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn short_description_list(&self) -> JsValue {
-        self.short_description_list.clone()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn properties(&self) -> JsValue {
-        self.properties.clone()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn list(&self) -> Vec<JsValue> {
-        web_sys::console::log_1(&format!("[DataStoreWrapper.list({})] length : {}", self.data_view.path, self.list.len()).into());
-        self.list.clone()
-    }
-
-}
- */
-
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
-// allocator.
-// #[cfg(feature = "wee_alloc")]
-// #[global_allocator]
-// static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-//use workflow_websocket::client::WebSocket;
-/*
-// Called when the wasm module is instantiated
-#[wasm_bindgen(start)]
-fn main() -> Result<(), JsValue> {
-    // Use `web_sys`'s global `window` function to get a handle on the global
-    // window object.
-    let window = web_sys::window().expect("no global `window` exists");
-    let document = window.document().expect("should have a document on window");
-    let body = document.body().expect("document should have a body");
-
-    // Manufacture the element we're gonna append
-    let val = document.create_element("p")?;
-    val.set_inner_html("Hello from Rust!");
-
-    body.append_child(&val)?;
-
-    Ok(())
-}
-*/
-
-// wasm-pack build --target web --dev
-// clear;find ./ | grep -F 'openapi-rufs_nfe-rust.json' | xargs rm ;PGHOST=localhost PGPORT=5432 PGUSER=development PGPASSWORD=123456 psql rufs_nfe_development -c "DROP DATABASE IF EXISTS rufs_nfe" && PGHOST=localhost PGPORT=5432 PGUSER=development PGPASSWORD=123456 psql rufs_nfe_development -c "CREATE DATABASE rufs_nfe" && cargo build && cargo test nfe -- --nocapture;
-#[cfg(test)]
-mod tests {
+#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "test-selelium")]
+pub mod tests {
     use crate::{DataView};
     use std::fs;
     use anyhow::{anyhow, Context};
@@ -3936,7 +3537,7 @@ mod tests {
     use rufs_base_rust::data_store::Filter;
     use serde::Deserialize;
     use serde_json::{Value, json};
-    use crate::{DataViewManager, DataViewWatch, DataViewProcessParams, RufsNfe};
+    use crate::{DataViewManager, DataViewWatch, DataViewProcessParams};
   /*  
     fn pause() {
         let mut stdin = io::stdin();
@@ -3986,10 +3587,9 @@ mod tests {
         //plugins: Vec<String>,
     }
 
-    #[tokio::test]
-    async fn selelium() -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn selelium(watcher: &dyn DataViewWatch, side_file_name: &str, url: &str) -> Result<(), Box<dyn std::error::Error>> {
         #[async_recursion::async_recursion]
-        async fn test_run(data_view_manager :&mut DataViewManager, watcher: &(impl DataViewWatch + std::marker::Sync), side: &SeleniumIde, id_or_name :&str) -> Result<(), Box<dyn std::error::Error>> {
+        async fn test_run(data_view_manager :&mut DataViewManager, watcher: &dyn DataViewWatch, side: &SeleniumIde, id_or_name :&str) -> Result<(), Box<dyn std::error::Error>> {
             if let Some(test) = side.tests.iter().find(|test| test.id == id_or_name || test.name == id_or_name) {
                 println!("\nRunning test {}...", test.name);
 
@@ -4206,16 +3806,15 @@ mod tests {
             Ok(())
         }
 
-        let watcher = RufsNfe{};
-        let mut data_view_manager = DataViewManager::new("http://localhost:8080");
-        let file = fs::File::open("/home/alexsandro/Downloads/webapp-rust.side").expect("file should open read only");
+        let mut data_view_manager = DataViewManager::new(url);
+        let file = fs::File::open(side_file_name).expect("file should open read only");
         let side: SeleniumIde = serde_json::from_reader(file).expect("file should be proper JSON");
 
         for suite in &side.suites {
             println!("suite : {:?}", suite);
 
             for id in &suite.tests {
-                test_run(&mut data_view_manager, &watcher, &side, &id).await?
+                test_run(&mut data_view_manager, watcher, &side, &id).await?
             }
         }
 
