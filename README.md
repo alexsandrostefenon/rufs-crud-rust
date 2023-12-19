@@ -1,4 +1,4 @@
-# rufs-crud-es6
+# rufs-crud-rust
 
 Restful Utilities for Full Stack - CRUD WebApp
 
